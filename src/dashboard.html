@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Performance Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #4361ee;
+            --secondary: #3f37c9;
+            --accent: #4895ef;
+            --danger: #f72585;
+            --success: #4cc9f0;
+            --dark: #1b263b;
+            --light: #f8f9fa;
+            --gray: #adb5bd;
+            --card-bg: #ffffff;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f0f2f5;
+            color: var(--dark);
+            min-height: 100vh;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            background: var(--dark);
+            color: var(--light);
+            padding: 1.5rem 1rem;
+            position: relative;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .sidebar-header {
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar-header h2 {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1.2rem;
+        }
+
+        .sidebar-header h2 i {
+            color: var(--accent);
+        }
+
+        .nav-menu {
+            list-style: none;
+        }
+
+        .nav-item {
+            margin-bottom: 0.5rem;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            color: var(--light);
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .nav-link:hover,
+        .nav-link.active {
+            background-color: rgba(67, 97, 238, 0.2);
+            color: var(--accent);
+        }
+
+        .nav-link i {
+            width: 24px;
+            text-align: center;
+        }
+
+        /* Main Content */
+        .main-content {
+            padding: 2rem;
+            overflow-y: auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .title h1 {
+            font-size: 1.8rem;
+            color: var(--dark);
+        }
+
+        .title p {
+            color: var(--gray);
+            font-size: 0.9rem;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        /* Cards */
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .card-title {
+            font-size: 1rem;
+            color: var(--gray);
+            font-weight: 500;
+        }
+
+        .card-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .card-change {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-size: 0.85rem;
+        }
+
+        .change-up {
+            color: var(--success);
+        }
+
+        .change-down {
+            color: var(--danger);
+        }
+
+        /* Charts Section */
+        .charts {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .chart-container {
+            background-color: var(--card-bg);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .chart-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .chart-legend {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        /* Comparison Table */
+        .comparison {
+            background-color: var(--card-bg);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        .comparison-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .comparison-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .time-filter {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .time-btn {
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            border: none;
+            background-color: var(--light);
+            color: var(--dark);
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+        }
+
+        .time-btn.active {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        th {
+            color: var(--gray);
+            font-weight: 500;
+            font-size: 0.85rem;
+        }
+
+        .model-cell {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .model-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.85rem;
+        }
+
+        .progress-container {
+            width: 100px;
+            height: 6px;
+            background-color: var(--light);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            border-radius: 3px;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            border: none;
+            background-color: var(--primary);
+            color: white;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn:hover {
+            background-color: var(--secondary);
+        }
+
+        @media (max-width: 1200px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                display: none;
+            }
+
+            .cards {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .charts {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .cards {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2><i class="fas fa-robot"></i>LLM Monitor</h2>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="#" class="nav-link active">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Performance</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link">
+                        <i class="fas fa-cogs"></i>
+                        <span>Models</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link">
+                        <i class="fas fa-database"></i>
+                        <span>Datasets</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link">
+                        <i class="fas fa-bell"></i>
+                        <span>Alerts</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link">
+                        <i class="fas fa-cog"></i>
+                        <span>Settings</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <div class="main-content">
+            <div class="header">
+                <div class="title">
+                    <h1>LLM Performance Dashboard</h1>
+                    <p>Monitor and compare the performance of your language models</p>
+                </div>
+                <div class="user-info">
+                    <div class="user-avatar">JD</div>
+                    <span>John Doe</span>
+                </div>
+            </div>
+
+            <div class="cards">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">Avg. Response Time</div>
+                        <i class="fas fa-clock" style="color: var(--accent);"></i>
+                    </div>
+                    <div class="card-value" id="avg-response-time">756ms</div>
+                    <div class="card-change change-down">
+                        <i class="fas fa-arrow-down"></i>
+                        <span>12.4% from yesterday</span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">Accuracy</div>
+                        <i class="fas fa-bullseye" style="color: var(--success);"></i>
+                    </div>
+                    <div class="card-value" id="avg-accuracy">87.3%</div>
+                    <div class="card-change change-up">
+                        <i class="fas fa-arrow-up"></i>
+                        <span>4.2% from yesterday</span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">Requests</div>
+                        <i class="fas fa-exchange-alt" style="color: var(--primary);"></i>
+                    </div>
+                    <div class="card-value" id="total-requests">12,459</div>
+                    <div class="card-change change-up">
+                        <i class="fas fa-arrow-up"></i>
+                        <span>18.7% from yesterday</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="charts">
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <div class="chart-title">Performance Trends (Last 7 Days)</div>
+                        <div class="chart-legend">
+                            <div class="legend-item">
+                                <div class="legend-color" style="background-color: #4361ee;"></div>
+                                <span>GPT-4</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background-color: #f72585;"></div>
+                                <span>Claude 3</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background-color: #4cc9f0;"></div>
+                                <span>Llama 3</span>
+                            </div>
+                        </div>
+                    </div>
+                    <canvas id="performanceChart"></canvas>
+                </div>
+
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <div class="chart-title">Metrics Distribution</div>
+                    </div>
+                    <canvas id="distributionChart"></canvas>
+                </div>
+            </div>
+
+            <div class="comparison">
+                <div class="comparison-header">
+                    <div class="comparison-title">Model Comparison</div>
+                    <div class="time-filter">
+                        <button class="time-btn" onclick="changeTimeRange('day')">Day</button>
+                        <button class="time-btn active" onclick="changeTimeRange('week')">Week</button>
+                        <button class="time-btn" onclick="changeTimeRange('month')">Month</button>
+                    </div>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Model</th>
+                            <th>Response Time</th>
+                            <th>Accuracy</th>
+                            <th>Requests</th>
+                            <th>Cost</th>
+                            <th>Uptime</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>
+                                <div class="model-cell">
+                                    <div class="model-icon" style="background-color: #4361ee;">G4</div>
+                                    <span>GPT-4</span>
+                                </div>
+                            </td>
+                            <td>
+                                642ms
+                                <div class="progress-container">
+                                    <div class="progress-bar" style="width: 70%; background-color: #4361ee;"></div>
+                                </div>
+                            </td>
+                            <td>
+                                89.1%
+                                <div class="progress-container">
+                                    <div class="progress-bar" style="width: 89%; background-color: #4cc9f0;"></div>
+                                </div>
+                            </td>
+                            <td>
+                                5,124
+                                <div class="progress-container">
+                                    <div class="progress-bar" style="width: 55%; background-color: #f72585;"></div>
+                                </div>
+                            </td>
+                            <td>$0.42</td>
+                            <td>99.8%</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="model-cell">
+                                    <div class="model-icon" style="background-color: #f72585;">C3</div>
+                                    <span>Claude 3</span>
+                                </div>
+                            </td>
+                            <td>
+                                712ms
+                                <div class="progress-container">
+                                    <div class="progress-bar" style="width: 65%; background-color: #4361ee;"></div>
+                                </div>
+                            </td>
+                            <td>
+                                86.7%
+                                <div class="progress-container">
+                                    <div class="progress-bar" style="width: 87%; background-color: #4cc9f0;"></div>
+                                </div>
+                            </td>
+                            <td>
+                                3,842
+                                <div class="progress-container">
+                                    <div class="progress-bar" style="width: 42%; background-color: #f72585;"></div>
+                                </div>
+                            </td>
+                            <td>$0.38</td>
+                            <td>99.5%</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="model-cell">
+                                    <div class="model-icon" style="background-color: #4cc9f0;">L3</div>
+                                    <span>Llama 3</span>
+                                </div>
+                            </td>
+                            <td>
+                                914ms
+                                <div class="progress-container">
+                                    <div class="progress-bar" style="width: 50%; background-color: #4361ee;"></div>
+                                </div>
+                            </td>
+                            <td>
+                                85.9%
+                                <div class="progress-container">
+                                    <div class="progress-bar" style="width: 86%; background-color: #4cc9f0;"></div>
+                                </div>
+                            </td>
+                            <td>
+                                3,493
+                                <div class="progress-container">
+                                    <div class="progress-bar" style="width: 38%; background-color: #f72585;"></div>
+                                </div>
+                            </td>
+                            <td>$0.31</td>
+                            <td>98.9%</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div style="margin-top: 1.5rem; text-align: right;">
+                    <button class="btn" onclick="exportData()">
+                        <i class="fas fa-download"></i>
+                        Export Report
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Performance Chart
+        const performanceCtx = document.getElementById('performanceChart').getContext('2d');
+        const performanceChart = new Chart(performanceCtx, {
+            type: 'line',
+            data: {
+                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                datasets: [
+                    {
+                        label: 'GPT-4',
+                        data: [89, 87, 90, 88, 91, 89, 90],
+                        borderColor: '#4361ee',
+                        backgroundColor: 'rgba(67, 97, 238, 0.1)',
+                        tension: 0.3,
+                        fill: true
+                    },
+                    {
+                        label: 'Claude 3',
+                        data: [86, 85, 87, 86, 88, 87, 88],
+                        borderColor: '#f72585',
+                        backgroundColor: 'rgba(247, 37, 133, 0.1)',
+                        tension: 0.3,
+                        fill: true
+                    },
+                    {
+                        label: 'Llama 3',
+                        data: [84, 83, 85, 84, 86, 85, 87],
+                        borderColor: '#4cc9f0',
+                        backgroundColor: 'rgba(76, 201, 240, 0.1)',
+                        tension: 0.3,
+                        fill: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            label: function (context) {
+                                return context.dataset.label + ': ' + context.parsed.y + '% accuracy';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        min: 80,
+                        max: 100,
+                        ticks: {
+                            callback: function (value) {
+                                return value + '%';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Distribution Chart
+        const distributionCtx = document.getElementById('distributionChart').getContext('2d');
+        const distributionChart = new Chart(distributionCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Accuracy', 'Response Time', 'Cost', 'Uptime', 'Requests'],
+                datasets: [{
+                    data: [30, 25, 20, 15, 10],
+                    backgroundColor: [
+                        '#4361ee',
+                        '#f72585',
+                        '#4cc9f0',
+                        '#3a0ca3',
+                        '#4895ef'
+                    ],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                return context.label + ': ' + context.parsed + '% weight';
+                            }
+                        }
+                    }
+                },
+                cutout: '70%'
+            }
+        });
+
+        // Time range filter
+        function changeTimeRange(range) {
+            document.querySelectorAll('.time-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // In a real app, you would fetch new data based on the time range
+            console.log('Time range changed to:', range);
+
+            // Update cards with random data for demo
+            updateCards();
+        }
+
+        // Update cards with random data
+        function updateCards() {
+            // Response Time
+            const responseTime = Math.floor(700 + Math.random() * 200);
+            document.getElementById('avg-response-time').textContent = responseTime + 'ms';
+
+            // Accuracy
+            const accuracy = (80 + Math.random() * 15).toFixed(1);
+            document.getElementById('avg-accuracy').textContent = accuracy + '%';
+
+            // Requests
+            const requests = Math.floor(10000 + Math.random() * 5000).toLocaleString();
+            document.getElementById('total-requests').textContent = requests;
+        }
+
+        // Export data
+        function exportData() {
+            alert('Exporting report data...');
+            // In a real app, this would generate and download a report
+        }
+
+        // Update cards every 5 seconds for demo purposes
+        setInterval(updateCards, 5000);
+
+        // Initial random data
+        updateCards();
+    </script>
+</body>
+
+</html>
